@@ -1,9 +1,11 @@
-#coded by Divij Garg
+# coded by Divij Garg
 # points of research: average number of turns for a game of uno to end
 # average deck size of players
 # assumptions/restrictions: no "uno" moment
 
 import random
+import statistics
+from pprint import pprint
 import numpy as np
 
 cardDeck = []
@@ -13,26 +15,44 @@ cardsPlaced = []
 currentColor = -6
 reverse = 1
 currentPlayerIndex = 0
-
+numberOfMoves = []
+overallData = []
 
 def main():
-    global numberOfPlayers, cardDeck, currentPlayerIndex
+    global overallData,numberOfMoves
+    for i in range(3, 10):  # number players
+        arr = []
+        for j in range(3, 10):  # number cards
+            arr.append(0)
+        overallData.append(arr)
+    pprint(overallData)
+
+    for players in range(0, 7):
+        for cards in range(0, 7):
+            print(players+cards)
+            for i in range(0, 10000):
+                doSimulation(players + 3, cards + 3)  # numberOfPlayers, numberOfStartingCards
+                resetData()
+            analyzeData(players, cards)
+            numberOfMoves=[]
+    pprint(overallData)
+
+
+# runs one game
+def doSimulation(players, cards):
+    global numberOfPlayers, cardDeck, currentPlayerIndex, numberOfMoves
     createCardDeck()
-    setPlayersDecks(3)
+    setPlayersDecks(players, cards)
     setCurrentCard()
+    moveCounter = 0
     while not winning():
-        print(currentPlayerIndex)
-        print(playersDecks)
-        # print(cardDeck)
-        print(currentColor)
-        print(cardsPlaced)
-        print("----------")
         doTurn(currentPlayerIndex)
+        moveCounter += 1
         currentPlayerIndex = currentPlayerIndex % numberOfPlayers
         while currentPlayerIndex < 0:
             currentPlayerIndex + numberOfPlayers
         checkMainDeck()
-        # print(playersDecks)
+    numberOfMoves.append(moveCounter)
 
 
 # Ensures Deck does not run out of cards
@@ -40,9 +60,8 @@ def checkMainDeck():
     global cardDeck, cardsPlaced
 
     while len(cardDeck) < 10:
-        for i in range(0, 4):
-            cardDeck.append(cardsPlaced[0])
-            cardsPlaced.pop(0)
+        cardDeck.append(cardsPlaced[0])
+        cardsPlaced.pop(0)
 
 
 # Selects an appropriate strategy based on many factors
@@ -60,12 +79,12 @@ def winning():
 
 
 # initializes players decks by first creating the amount of player decks and then filling them with cards.
-def setPlayersDecks(amount):
+def setPlayersDecks(amount, numberCards):
     global numberOfPlayers, playersDecks, cardDeck
     numberOfPlayers = amount
     for _ in range(0, numberOfPlayers):
         playersDecks.append([])
-    for _ in range(0, 7):
+    for _ in range(0, numberCards):
         for i in range(0, numberOfPlayers):
             card = cardDeck[0]
             cardDeck.pop(0)
@@ -87,7 +106,6 @@ def createCardDeck():
             cardDeck.append([i, j % 4])
 
     np.random.shuffle(cardDeck)
-    # print(cardDeck)
 
 
 # sets the current card, makes sure it's a numeral one.
@@ -106,10 +124,9 @@ def setCurrentCard():
 
     cardsPlaced.append(currentCard)
 
-    # print(currentCard)
 
 
-# this algorithm preferences action cards over regular cards
+# this algorithm preferences number cards over action cards
 def youngChildMove(index):
     global playersDecks, cardDeck, reverse, currentPlayerIndex
     play = []
@@ -123,14 +140,12 @@ def youngChildMove(index):
         play = possibleActionCards[returnRandInt(0, len(possibleActionCards) - 1)]
     elif len(possibleWildCards) > 0:
         play = possibleWildCards[returnRandInt(0, len(possibleWildCards) - 1)]
-    # print(play)
 
     if play == []:
         playersDecks[index].append(getNewCard())
         currentPlayerIndex += 1 * reverse
     else:
         doPlay(play, index)
-        # print(playersDecks[index])
 
 
 # returns the action cards
@@ -186,7 +201,7 @@ def doPlay(play, index):
     elif play[0] == 12:
         currentPlayerIndex += 2 * reverse
     elif play[0] == 13:
-        doWild(index,True)
+        doWild(index, True)
     elif play[0] == 14:
         doDrawFour(index)
     else:
@@ -195,7 +210,7 @@ def doPlay(play, index):
 
 def doDrawFour(index):
     global numberOfPlayers, playersDecks, currentPlayerIndex, reverse
-    doWild(index,False)
+    doWild(index, False)
     for _ in range(4):
         playersDecks[(index + reverse) % numberOfPlayers].append(getNewCard())
     currentPlayerIndex += 2 * reverse
@@ -240,6 +255,27 @@ def getNewCard():
     card = cardDeck[0]
     cardDeck.pop(0)
     return card
+
+
+def resetData():
+    global cardsPlaced, numberOfPlayers, cardDeck, playersDecks, reverse, currentColor, currentPlayerIndex
+    cardDeck = []
+    numberOfPlayers = 0
+    playersDecks = []
+    cardsPlaced = []
+    currentColor = -6
+    reverse = 1
+    currentPlayerIndex = 0
+
+
+def analyzeData(i, j):
+    global numberOfMoves, overallData
+    overallData[i][j] = statistics.mean(numberOfMoves)
+
+    # print(numberOfMoves)
+    # print(statistics.mean(numberOfMoves))
+    # print(statistics.median(numberOfMoves))
+    # print(statistics.stdev(numberOfMoves))
 
 
 main()
