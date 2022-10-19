@@ -1,5 +1,5 @@
 # coded by Divij Garg
-# points of research: average number of turns for a game of uno to end
+# points of research: average number of turns for a game of uno to end, probability of having a card to place down.
 # average deck size of players
 # assumptions/restrictions: no "uno" moment
 
@@ -7,6 +7,7 @@ import random
 import statistics
 from pprint import pprint
 import numpy as np
+import matplotlib.pyplot as plt
 
 cardDeck = []
 numberOfPlayers = 0
@@ -17,34 +18,50 @@ reverse = 1
 currentPlayerIndex = 0
 numberOfMoves = []
 overallData = []
+minPlayers = 0
+maxPlayers = 0
+minCards = 0
+maxCards = 0
+numberFail = 0
+probabilityCard = []
+
 
 def main():
-    global overallData,numberOfMoves
-    for i in range(3, 10):  # number players
+    global overallData, numberOfMoves, maxCards, minCards, minPlayers, maxPlayers
+    minPlayers = 3
+    maxPLayers = 7
+    minCards = 3
+    maxCards = 14
+
+    for i in range(minPlayers, maxPLayers + 1):  # number players
         arr = []
-        for j in range(3, 10):  # number cards
+        for j in range(minCards, maxCards + 1):  # number cards
             arr.append(0)
         overallData.append(arr)
     pprint(overallData)
 
-    for players in range(0, 7):
-        for cards in range(0, 7):
-            print(players+cards)
-            for i in range(0, 10000):
-                doSimulation(players + 3, cards + 3)  # numberOfPlayers, numberOfStartingCards
+    for players in range(0, maxPLayers - minPlayers + 1):
+        for cards in range(0, maxCards - minCards + 1):
+            # print(players + cards)
+            for i in range(0, 1000):
+                # print(i)
+                doSimulation(players + minPlayers, cards + minCards)  # numberOfPlayers, numberOfStartingCards
                 resetData()
             analyzeData(players, cards)
-            numberOfMoves=[]
+            numberOfMoves = []
+
     pprint(overallData)
+    makeGraphs()
 
 
 # runs one game
 def doSimulation(players, cards):
-    global numberOfPlayers, cardDeck, currentPlayerIndex, numberOfMoves
+    global numberOfPlayers, cardDeck, currentPlayerIndex, numberOfMoves, numberFail
     createCardDeck()
     setPlayersDecks(players, cards)
     setCurrentCard()
     moveCounter = 0
+    numberFail = 0
     while not winning():
         doTurn(currentPlayerIndex)
         moveCounter += 1
@@ -52,6 +69,8 @@ def doSimulation(players, cards):
         while currentPlayerIndex < 0:
             currentPlayerIndex + numberOfPlayers
         checkMainDeck()
+
+    print(numberFail / moveCounter)
     numberOfMoves.append(moveCounter)
 
 
@@ -59,7 +78,8 @@ def doSimulation(players, cards):
 def checkMainDeck():
     global cardDeck, cardsPlaced
 
-    while len(cardDeck) < 10:
+    while len(cardDeck) < 6 and len(cardsPlaced) > 1:
+        # print(cardsPlaced)
         cardDeck.append(cardsPlaced[0])
         cardsPlaced.pop(0)
 
@@ -125,10 +145,9 @@ def setCurrentCard():
     cardsPlaced.append(currentCard)
 
 
-
 # this algorithm preferences number cards over action cards
 def youngChildMove(index):
-    global playersDecks, cardDeck, reverse, currentPlayerIndex
+    global playersDecks, cardDeck, reverse, currentPlayerIndex, numberFail
     play = []
     possibleActionCards = returnActionCards(playersDecks[index])
     possibleWildCards = returnWildCards(playersDecks[index])
@@ -144,6 +163,7 @@ def youngChildMove(index):
     if play == []:
         playersDecks[index].append(getNewCard())
         currentPlayerIndex += 1 * reverse
+        numberFail += 1
     else:
         doPlay(play, index)
 
@@ -152,6 +172,7 @@ def youngChildMove(index):
 def returnActionCards(array):
     global cardsPlaced, currentColor
     cards = []
+    # print(cardsPlaced)
     currentCard = cardsPlaced[len(cardsPlaced) - 1]
     for i in range(0, len(array)):
         if 10 <= array[i][0] <= 12:
@@ -278,4 +299,40 @@ def analyzeData(i, j):
     # print(statistics.stdev(numberOfMoves))
 
 
+# makes graphs using the data collected
+def makeGraphs():
+    global overallData, minPlayers, maxPlayers, maxCards, minCards
+
+    arr = []
+    for i in range(minCards, maxCards + 1):
+        arr.append(i)
+
+    x = np.array(arr)  # X-axis points
+
+    y = overallData[0]
+    # plt.legend(3)
+    plt.plot(x, y)
+
+    y = overallData[1]
+    # plt.legend(4)
+    plt.plot(x, y)
+
+    y = overallData[2]
+    # plt.legend(5)
+    plt.plot(x, y)
+
+    y = overallData[3]
+    # plt.legend(6)
+    plt.plot(x, y)
+    #
+    y = overallData[4]
+    # # plt.legend(7)
+    plt.plot(x, y)
+
+    plt.show()
+
+
 main()
+
+
+
