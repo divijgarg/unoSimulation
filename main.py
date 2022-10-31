@@ -1,12 +1,8 @@
 # coded by Divij Garg
-# points of research: average number of turns for a game of uno to end, probability of having a card to place down.
-# average deck size of players
-# assumptions/restrictions: no "uno" moment
 
 import random
 import copy
 import statistics
-from pprint import pprint
 import numpy as np
 import matplotlib.pyplot as plt
 import numpy.random
@@ -35,11 +31,11 @@ class OneTrialSimulation:
         self.currentPlayerIndex = 0
         self.reverse = 1
         self.moveCounter = 0
-        self.cardDeck = copy.deepcopy(mainDeck)
+        self.cardDeck = []
 
     # runs one game
     def doSimulation(self):
-
+        self.createCardDeck()
         self.setPlayersDecks()
         self.setCurrentCard()
         while not self.winning():
@@ -60,7 +56,11 @@ class OneTrialSimulation:
 
     # Selects an appropriate strategy based on many factors
     def doTurn(self, index):
-        self.youngChildMove(index)
+        nextPlayerIndex = (self.currentPlayerIndex + self.reverse) % self.numPlayers
+        if len(self.playersDecks[nextPlayerIndex]) <= 3:
+            self.bigBrainMove(index)
+        else:
+            self.youngChildMove(index)
 
     def winning(self):
         for i in range(0, self.numPlayers):
@@ -113,6 +113,46 @@ class OneTrialSimulation:
             self.numberFail += 1
         else:
             self.doPlay(play, index)
+
+    # this algorithm preferences number cards over action cards
+    def bigBrainMove(self, index):
+        play = []
+        possibleDrawTwos = self.returnGeneralCard(self.playersDecks[index], 10)
+        possibleReverses = self.returnGeneralCard(self.playersDecks[index], 11)
+        possibleSkips = self.returnGeneralCard(self.playersDecks[index], 12)
+        possibleWilds = self.returnGeneralCard(self.playersDecks[index], 13)
+        possibleDrawFours = self.returnGeneralCard(self.playersDecks[index], 14)
+        possibleNumberCards = self.returnNumberCards(self.playersDecks[index])
+
+        if len(possibleDrawTwos) > 0:
+            play = possibleDrawTwos[self.returnRandInt(0, len(possibleDrawTwos) - 1)]
+        elif len(possibleSkips) > 0:
+            play = possibleSkips[self.returnRandInt(0, len(possibleSkips) - 1)]
+        elif len(possibleReverses) > 0:
+            play = possibleReverses[self.returnRandInt(0, len(possibleReverses) - 1)]
+        elif len(possibleDrawFours) > 0:
+            play = possibleDrawFours[self.returnRandInt(0, len(possibleDrawFours) - 1)]
+        elif len(possibleWilds) > 0:
+            play = possibleWilds[self.returnRandInt(0, len(possibleWilds) - 1)]
+        elif len(possibleNumberCards) > 0:
+            play = possibleNumberCards[self.returnRandInt(0, len(possibleNumberCards) - 1)]
+
+        if play == []:
+            self.playersDecks[index].append(self.getNewCard())
+            self.currentPlayerIndex += 1 * self.reverse
+            self.numberFail += 1
+        else:
+            self.doPlay(play, index)
+
+    # returns amount of a certain card
+    def returnGeneralCard(self, array, card):
+        cards = []
+        self.currentCard = self.cardsPlaced[len(self.cardsPlaced) - 1]
+        for i in range(0, len(array)):
+            if card <= array[i][0] <= card + 1:
+                if array[i][0] == self.currentCard[0] or array[i][1] == self.currentColor:
+                    cards.append(array[i])
+        return cards
 
     # returns the action cards
     def returnActionCards(self, array):
@@ -204,6 +244,18 @@ class OneTrialSimulation:
         if changeIndex:
             self.currentPlayerIndex += self.reverse
 
+    def createCardDeck(self):
+        for i in range(0, 4):
+            self.cardDeck.append([0, i])
+            self.cardDeck.append([13, 5])
+            self.cardDeck.append([14, 5])
+
+        for i in range(1, 13):
+            for j in range(0, 8):
+                self.cardDeck.append([i, j % 4])
+
+        np.random.shuffle(self.cardDeck)
+
 
 # stores all trials with given players and cards
 class Simulation:
@@ -219,7 +271,7 @@ class Simulation:
     # runs trials for given players and cards
     def runSimulations(self):
         for i in range(0, self.numTrials):
-            trial = OneTrialSimulation(self.numPl, self.numCa,self.deck)
+            trial = OneTrialSimulation(self.numPl, self.numCa, self.deck)
             trial.doSimulation()
             self.trials.append(trial)
         self.analyze()
@@ -245,7 +297,7 @@ def main():
         for cards in range(minCards, maxCards + 1):
             print(players + cards)
             numpy.random.shuffle(cardDeck)
-            sim = Simulation(1000, players, cards,cardDeck)
+            sim = Simulation(1000, players, cards, cardDeck)
             sim.runSimulations()
             simulations.append(sim)
     makeGraphs()
@@ -270,38 +322,75 @@ def makeGraphs():
     probabilites = []
     for i in range(0, amt):
         probabilites.append(simulations[i].meanNumberOfMoves)
-
-    plt.plot(x, probabilites)
+    plt.plot(x, probabilites, label="3 Players")
+    plt.legend(loc="upper left")
 
     probabilites = []
     for i in range(amt, amt * 2):
         probabilites.append(simulations[i].meanNumberOfMoves)
 
-    plt.plot(x, probabilites)
+    plt.plot(x, probabilites, label="4 Players")
 
     probabilites = []
     for i in range(amt * 2, amt * 3):
         probabilites.append(simulations[i].meanNumberOfMoves)
 
-    plt.plot(x, probabilites)
+    plt.plot(x, probabilites, label="5 Players")
 
     probabilites = []
     for i in range(amt * 3, amt * 4):
         probabilites.append(simulations[i].meanNumberOfMoves)
 
-    plt.plot(x, probabilites)
+    plt.plot(x, probabilites, label="6 Players")
 
     probabilites = []
     for i in range(amt * 4, amt * 5):
         probabilites.append(simulations[i].meanNumberOfMoves)
 
-    plt.plot(x, probabilites)
+    plt.plot(x, probabilites, label="7 Players")
+    plt.legend(loc="upper left")
 
     plt.show()
 
-    # initializes the carddeck array by filling it with cards and shuffles the array. first index is number, second index is color
-    # 10=draw 2, 11=reverse, 12=skip,13=wild, 14= draw four
-    # 0=blue, 1=red, 2=green, 3=yellow
+    arr = []
+    for i in range(minCards, maxCards + 1):
+        arr.append(i)
+
+    x = np.array(arr)  # X-axis points
+
+    amt = maxCards - minCards + 1
+    probabilites = []
+    for i in range(0, amt):
+        probabilites.append(simulations[i].averageProb)
+    plt.plot(x, probabilites, label="3 Players")
+    plt.legend(loc="upper left")
+
+    probabilites = []
+    for i in range(amt, amt * 2):
+        probabilites.append(simulations[i].averageProb)
+
+    plt.plot(x, probabilites, label="4 Players")
+
+    probabilites = []
+    for i in range(amt * 2, amt * 3):
+        probabilites.append(simulations[i].averageProb)
+
+    plt.plot(x, probabilites, label="5 Players")
+
+    probabilites = []
+    for i in range(amt * 3, amt * 4):
+        probabilites.append(simulations[i].averageProb)
+
+    plt.plot(x, probabilites, label="6 Players")
+
+    probabilites = []
+    for i in range(amt * 4, amt * 5):
+        probabilites.append(simulations[i].averageProb)
+
+    plt.plot(x, probabilites, label="7 Players")
+    plt.legend(loc="upper left")
+
+    plt.show()
 
 
 def createCardDeck():
